@@ -375,8 +375,37 @@ function SemiRoll({ mood, look }) {
   );
 }
 
+// ── Composant Rive (chat animé avec suivi de souris) ──────────────
+function HeidiRive({ scale = 1 }) {
+  const canvasRef = React.useRef(null);
+  const riveRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!canvasRef.current || typeof rive === 'undefined') return;
+    const r = new rive.Rive({
+      src: 'heidi.riv',
+      canvas: canvasRef.current,
+      autoplay: true,
+      stateMachines: 'State Machine 1',
+      onLoad: () => r.resizeDrawingSurfaceToCanvas(),
+    });
+    riveRef.current = r;
+    return () => { try { r.cleanup(); } catch(e) {} };
+  }, []);
+
+  const size = Math.round(300 * scale);
+  return (
+    <canvas ref={canvasRef} width={size} height={size}
+      style={{ width: size + 'px', height: size + 'px', display: 'block' }} />
+  );
+}
+
 // ── Composant principal ────────────────────────────────────────────
 function Heidi({ mood = 'neutral', pose = 'sit', style, look, scale = 1, breathing = true, ...rest }) {
+  // Chat Rive pour la pose assise (hub principal)
+  if (pose === 'sit') {
+    return <HeidiRive scale={scale} />;
+  }
   const [tick, setTick] = React.useState(0);
   React.useEffect(() => {
     if (!breathing) return;
