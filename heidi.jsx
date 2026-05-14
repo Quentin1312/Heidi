@@ -375,28 +375,103 @@ function SemiRoll({ mood, look }) {
   );
 }
 
-// ── Composant Rive (chat animé avec suivi de souris) ──────────────
-function HeidiRive({ scale = 1 }) {
-  const canvasRef = React.useRef(null);
-  const riveRef = React.useRef(null);
+// ── Chat SVG animé ────────────────────────────────────────────────
+function HeidiSVGCat({ mood = 'neutral', scale = 1 }) {
+  const svgRef = React.useRef(null);
+  const [look, setLook] = React.useState({ x: 0, y: 0 });
+  const [blink, setBlink] = React.useState(false);
 
   React.useEffect(() => {
-    if (!canvasRef.current || typeof rive === 'undefined') return;
-    const r = new rive.Rive({
-      src: 'heidi.riv',
-      canvas: canvasRef.current,
-      autoplay: true,
-      stateMachines: 'State Machine 1',
-      onLoad: () => r.resizeDrawingSurfaceToCanvas(),
-    });
-    riveRef.current = r;
-    return () => { try { r.cleanup(); } catch(e) {} };
+    const onMove = (e) => {
+      if (!svgRef.current) return;
+      const rect = svgRef.current.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      setLook({
+        x: Math.max(-1, Math.min(1, (e.clientX - cx) / (rect.width / 2))),
+        y: Math.max(-1, Math.min(1, (e.clientY - cy) / (rect.height / 2))),
+      });
+    };
+    window.addEventListener('mousemove', onMove);
+    return () => window.removeEventListener('mousemove', onMove);
   }, []);
 
-  const size = Math.round(300 * scale);
+  React.useEffect(() => {
+    let timer;
+    const schedule = () => {
+      timer = setTimeout(() => {
+        setBlink(true);
+        setTimeout(() => setBlink(false), 320);
+        schedule();
+      }, 2500 + Math.random() * 4000);
+    };
+    schedule();
+    return () => clearTimeout(timer);
+  }, []);
+
+  const px = look.x * 7;
+  const py = look.y * 7;
+
+  const topH = blink ? 33 : ({ sleepy: 22, happy: 13, sad: 10, grumpy: 18 }[mood] || 0);
+  const botH = blink ? 16 : ({ sleepy: 12, happy: 22 }[mood] || 0);
+
+  const w = Math.round(300 * scale);
+  const h = Math.round(380 * scale);
+
   return (
-    <canvas ref={canvasRef} width={size} height={size}
-      style={{ width: size + 'px', height: size + 'px', display: 'block' }} />
+    <svg ref={svgRef} width={w} height={h} viewBox="0 0 300 380" style={{ overflow: 'visible', display: 'block' }}>
+      <defs>
+        <clipPath id="ey-L"><ellipse cx="113" cy="152" rx="31" ry="34" /></clipPath>
+        <clipPath id="ey-R"><ellipse cx="187" cy="152" rx="31" ry="34" /></clipPath>
+      </defs>
+      <style>{`
+        @keyframes h-idle { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+        @keyframes h-tail { 0%,100%{transform:rotate(0deg)} 50%{transform:rotate(16deg)} }
+        .h-body { animation: h-idle 2.8s ease-in-out infinite; }
+        .h-tail { animation: h-tail 2.2s ease-in-out infinite; transform-origin: 188px 278px; }
+      `}</style>
+
+      <g className="h-body">
+        {/* Ombre */}
+        <ellipse cx="150" cy="343" rx="65" ry="11" fill="#888" opacity="0.28" />
+        {/* Corps */}
+        <rect x="111" y="228" width="78" height="118" rx="39" fill="#111" />
+        {/* Tête */}
+        <circle cx="150" cy="148" r="90" fill="#111" />
+        {/* Oreilles */}
+        <polygon points="86,110 100,48 140,93" fill="#111" />
+        <polygon points="93,105 105,65 133,91" fill="#F0A8B8" />
+        <polygon points="214,110 200,48 160,93" fill="#111" />
+        <polygon points="207,105 195,65 167,91" fill="#F0A8B8" />
+        {/* Œil gauche */}
+        <ellipse cx="113" cy="152" rx="30" ry="33" fill="#FFE05A" />
+        <ellipse cx={113+px} cy={156+py} rx="15" ry="19" fill="#111" />
+        <circle cx="101" cy="138" r="8" fill="white" />
+        <rect x="82" y="118" width="62" height={topH} fill="#111" clipPath="url(#ey-L)" />
+        <rect x="82" y={186-botH} width="62" height={botH} fill="#111" clipPath="url(#ey-L)" />
+        {/* Œil droit */}
+        <ellipse cx="187" cy="152" rx="30" ry="33" fill="#FFE05A" />
+        <ellipse cx={187+px} cy={156+py} rx="15" ry="19" fill="#111" />
+        <circle cx="175" cy="138" r="8" fill="white" />
+        <rect x="156" y="118" width="62" height={topH} fill="#111" clipPath="url(#ey-R)" />
+        <rect x="156" y={186-botH} width="62" height={botH} fill="#111" clipPath="url(#ey-R)" />
+        {/* Nez */}
+        <ellipse cx="150" cy="178" rx="3.5" ry="2.5" fill="#2a2a2a" />
+        {/* Moustaches gauche */}
+        <line x1="140" y1="173" x2="52" y2="160" stroke="#2a2a2a" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="140" y1="178" x2="50" y2="178" stroke="#2a2a2a" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="140" y1="183" x2="52" y2="196" stroke="#2a2a2a" strokeWidth="1.5" strokeLinecap="round" />
+        {/* Moustaches droite */}
+        <line x1="160" y1="173" x2="248" y2="160" stroke="#2a2a2a" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="160" y1="178" x2="250" y2="178" stroke="#2a2a2a" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="160" y1="183" x2="248" y2="196" stroke="#2a2a2a" strokeWidth="1.5" strokeLinecap="round" />
+      </g>
+      {/* Queue */}
+      <g className="h-tail">
+        <path d="M 188 278 Q 228 290 224 314 Q 220 330 206 325"
+          fill="none" stroke="#111" strokeWidth="18" strokeLinecap="round" />
+      </g>
+    </svg>
   );
 }
 
@@ -404,7 +479,7 @@ function HeidiRive({ scale = 1 }) {
 function Heidi({ mood = 'neutral', pose = 'sit', style, look, scale = 1, breathing = true, ...rest }) {
   // Chat Rive pour la pose assise (hub principal)
   if (pose === 'sit') {
-    return <HeidiRive scale={scale} />;
+    return <HeidiSVGCat mood={mood} scale={scale} />;
   }
   const [tick, setTick] = React.useState(0);
   React.useEffect(() => {
